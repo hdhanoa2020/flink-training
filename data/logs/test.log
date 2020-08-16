@@ -1,0 +1,8 @@
+2020-08-15 18:52:18,839 INFO o.s.b.StartupInfoLogger [main] Starting PerfIT v1.0-SNAPSHOT on EC2AMAZ-GKSJDD7 with PID 3040 (C:\workspace\flink-training\flink-training\data\order-generator.jar started by Administrator in C:\workspace\flink-training\flink-training\data)
+2020-08-15 18:52:18,854 INFO o.s.b.SpringApplication [main] No active profile set, falling back to default profiles: default
+2020-08-15 18:52:23,023 INFO o.s.b.StartupInfoLogger [main] Started PerfIT in 4.699 seconds (JVM running for 6.16)
+2020-08-15 18:52:23,033 INFO c.r.w.PerfIT [main] Generation properties: ComplianceTestProperties(ordersPerSec=1, testDuration=2000, accountsCount=2, subAccountsCount=1, rulesCount=1, allocationsCount=2, ruleDelay=0)
+2020-08-15 18:52:23,090 INFO c.r.w.PerfIT [main] Accounts and sub accounts have been generated. Generating rules, it may take time...
+2020-08-15 18:52:33,119 INFO c.r.w.PerfIT [main] Rules generation and saving took 10020ms
+2020-08-15 18:52:35,213 INFO c.r.w.c.ComplianceSender [main] 21 orders sent in 2.094 seconds, raw throughput=10.02865329512894
+2020-08-15 18:52:35,213 INFO c.r.w.PerfIT [main] All done

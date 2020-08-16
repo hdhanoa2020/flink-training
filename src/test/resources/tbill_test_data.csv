@@ -1,0 +1,8 @@
+1596160806100-13,Cusip20,Bond,BUY,null,null,quantity=65,0,[Allocation(account=ACC7, subAccount=S7, quantity=65)] )
+1596160806100-13,Cusip20,Bond,SELL,null,null,quantity=65,0,[Allocation(account=ACC7, subAccount=S7, quantity=25)] )
+
+1596160806100-13,Cusip25,Bond,BUY,null,null,quantity=65,0,[Allocation(account=ACC8, subAccount=S8, quantity=60)] )
+1596160806100-13,Cusip25,Bond,SELL,null,null,quantity=65,0,[Allocation(account=ACC8, subAccount=S8, quantity=5)] )
+
+1596160806100-13,Cusip26,Bond,BUY,null,null,quantity=65,0,[Allocation(account=ACC9, subAccount=S7, quantity=65)] )
+1596160806100-13,Cusip26,Bond,SELL,null,null,quantity=65,0,[Allocation(account=ACC9, subAccount=S7, quantity=10)] )
