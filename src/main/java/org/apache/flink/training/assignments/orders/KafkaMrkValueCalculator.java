@@ -22,7 +22,7 @@ import java.util.Properties;
 
 public class KafkaMrkValueCalculator extends ExerciseBase {
 
-    private static final Logger LOG = LoggerFactory.getLogger(KafkaOrderAssignment.class);
+    private static final Logger LOG = LoggerFactory.getLogger(KafkaOrderAssignmentProcessingTime.class);
 
     public static final String KAFKA_ADDRESS = "kafka.dest.harpreet1.wsn.riskfocus.com:9092";
     public static final String IN_TOPIC = "in";
@@ -110,9 +110,10 @@ public class KafkaMrkValueCalculator extends ExerciseBase {
         FlinkKafkaProducer010 flinkKafkaProducerBySym = createMrkValueSymbolProducer(MV_BY_SYMBOL_TOPIC,KAFKA_ADDRESS);
         mkvBySymbol.addSink(flinkKafkaProducerBySym);
 
+        System.out.println(env.getExecutionPlan());
 
         // execute the transformation pipeline
-        env.execute("KafkaMVCalculator");
+        //env.execute("KafkaMVCalculator");
     }
 
     private static DataStream<Position> CalculatePostionQtyByAccount(DataStream<Position> accountAllocation){

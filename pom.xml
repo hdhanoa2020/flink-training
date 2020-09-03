@@ -173,8 +173,8 @@ under the License.
 							</filters>
 							<transformers>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									 <mainClass>org.apache.flink.training.assignments.orders.KafkaOrderAssignment</mainClass>
-									<!--<mainClass>org.apache.flink.training.assignments.orders.KafkaMrkValueCalculator</mainClass> -->
+									<!-- <mainClass>org.apache.flink.training.assignments.orders.KafkaOrderAssignment</mainClass> -->
+									<mainClass>org.apache.flink.training.assignments.orders.KafkaOrdersWithoutWindow</mainClass>
 
 								</transformer>
 							</transformers>

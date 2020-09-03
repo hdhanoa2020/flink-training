@@ -18,13 +18,12 @@
 
 package org.apache.flink.training.assignments.sources;
 
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.training.assignments.domain.Order;
 import org.apache.flink.training.assignments.domain.OrderTestResults;
 //import org.apache.flink.training.assignments.domain.TBillRate;
 //import org.apache.flink.training.assignments.domain.TBillTestResults;
-import org.apache.flink.training.assignments.orders.KafkaOrderAssignment;
+import org.apache.flink.training.assignments.orders.KafkaOrderAssignmentProcessingTime;
 import org.apache.flink.training.assignments.orders.TestBase;
 import org.apache.flink.training.assignments.orders.Testable;
 //import org.apache.flink.training.assignments.sinks.AverageSink;
@@ -34,14 +33,11 @@ import org.apache.flink.training.assignments.orders.Testable;
 //import org.apache.flink.training.assignments.sources.TestRateSource;
 
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.DecimalFormat;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -49,7 +45,7 @@ public class OrderAllocationTest extends TestBase<Order,Tuple3<LocalDateTime, Do
     private static final Logger LOG = LoggerFactory.getLogger(OrderAllocationTest.class);
 
     private static final String[] testMonths = new String[]{"2020-03"};
-    private static final Testable TEST_APPLICATION = () -> KafkaOrderAssignment.main(testMonths);
+    private static final Testable TEST_APPLICATION = () -> KafkaOrderAssignmentProcessingTime.main(testMonths);
     private static final DecimalFormat df = new DecimalFormat("0.00000E00");
     private static OrderTestResults testResults = null;
 

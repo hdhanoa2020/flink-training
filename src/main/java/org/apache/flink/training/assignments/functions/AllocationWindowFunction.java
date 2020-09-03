@@ -30,6 +30,7 @@ public class AllocationWindowFunction extends ProcessWindowFunction<Position, Po
             //LOG.debug("AllocationWindowFunction orderId: {}",orderId);
         }
         Position aa = new Position(tuple3.f0,BuySell.BUY,tuple3.f1, tuple3.f2,sum,orderId);
+        aa.setPositionKey(tuple3.f0+tuple3.f1+tuple3.f2);
         collector.collect(aa);
     }
 }

@@ -1,0 +1,280 @@
+{
+  "nodes": [
+    {
+      "id": 1,
+      "type": "Source: KafkaOrderReader",
+      "pact": "Data Source",
+      "contents": "Source: KafkaOrderReader",
+      "parallelism": 4
+    },
+    {
+      "id": 2,
+      "type": "Source: KafkaPriceReader",
+      "pact": "Data Source",
+      "contents": "Source: KafkaPriceReader",
+      "parallelism": 4
+    },
+    {
+      "id": 4,
+      "type": "splitAllocations",
+      "pact": "Operator",
+      "contents": "splitAllocations",
+      "parallelism": 4,
+      "predecessors": [
+        {
+          "id": 1,
+          "ship_strategy": "FORWARD",
+          "side": "second"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "Timestamps/Watermarks",
+      "pact": "Operator",
+      "contents": "Timestamps/Watermarks",
+      "parallelism": 4,
+      "predecessors": [
+        {
+          "id": 4,
+          "ship_strategy": "FORWARD",
+          "side": "second"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "positionsByAccount",
+      "pact": "Operator",
+      "contents": "positionsByAccount",
+      "parallelism": 4,
+      "predecessors": [
+        {
+          "id": 5,
+          "ship_strategy": "HASH",
+          "side": "second"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "Timestamps/Watermarks",
+      "pact": "Operator",
+      "contents": "Timestamps/Watermarks",
+      "parallelism": 4,
+      "predecessors": [
+        {
+          "id": 4,
+          "ship_strategy": "FORWARD",
+          "side": "second"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "PostionsBySymbol",
+      "pact": "Operator",
+      "contents": "PostionsBySymbol",
+      "parallelism": 4,
+      "predecessors": [
+        {
+          "id": 9,
+          "ship_strategy": "HASH",
+          "side": "second"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "AccountLeveMrkValueOutput",
+      "pact": "Operator",
+      "contents": "AccountLeveMrkValueOutput",
+      "parallelism": 4,
+      "predecessors": [
+        {
+          "id": 2,
+          "ship_strategy": "HASH",
+          "side": "second"
+        },
+        {
+          "id": 7,
+          "ship_strategy": "HASH",
+          "side": "second"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "type": "Map",
+      "pact": "Operator",
+      "contents": "Map",
+      "parallelism": 4,
+      "predecessors": [
+        {
+          "id": 16,
+          "ship_strategy": "FORWARD",
+          "side": "second"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "CusipLeveMrkValueOutput",
+      "pact": "Operator",
+      "contents": "CusipLeveMrkValueOutput",
+      "parallelism": 4,
+      "predecessors": [
+        {
+          "id": 2,
+          "ship_strategy": "HASH",
+          "side": "second"
+        },
+        {
+          "id": 11,
+          "ship_strategy": "HASH",
+          "side": "second"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "Sink: Unnamed",
+      "pact": "Data Sink",
+      "contents": "Sink: Unnamed",
+      "parallelism": 4,
+      "predecessors": [
+        {
+          "id": 7,
+          "ship_strategy": "FORWARD",
+          "side": "second"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "Sink: Unnamed",
+      "pact": "Data Sink",
+      "contents": "Sink: Unnamed",
+      "parallelism": 4,
+      "predecessors": [
+        {
+          "id": 11,
+          "ship_strategy": "FORWARD",
+          "side": "second"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "Sink: Unnamed",
+      "pact": "Data Sink",
+      "contents": "Sink: Unnamed",
+      "parallelism": 4,
+      "predecessors": [
+        {
+          "id": 7,
+          "ship_strategy": "FORWARD",
+          "side": "second"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "Sink: Unnamed",
+      "pact": "Data Sink",
+      "contents": "Sink: Unnamed",
+      "parallelism": 4,
+      "predecessors": [
+        {
+          "id": 11,
+          "ship_strategy": "FORWARD",
+          "side": "second"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "type": "Sink: Unnamed",
+      "pact": "Data Sink",
+      "contents": "Sink: Unnamed",
+      "parallelism": 4,
+      "predecessors": [
+        {
+          "id": 16,
+          "ship_strategy": "FORWARD",
+          "side": "second"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "type": "Sink: Unnamed",
+      "pact": "Data Sink",
+      "contents": "Sink: Unnamed",
+      "parallelism": 4,
+      "predecessors": [
+        {
+          "id": 18,
+          "ship_strategy": "FORWARD",
+          "side": "second"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "Sink: Unnamed",
+      "pact": "Data Sink",
+      "contents": "Sink: Unnamed",
+      "parallelism": 4,
+      "predecessors": [
+        {
+          "id": 21,
+          "ship_strategy": "FORWARD",
+          "side": "second"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "Sink: Unnamed",
+      "pact": "Data Sink",
+      "contents": "Sink: Unnamed",
+      "parallelism": 4,
+      "predecessors": [
+        {
+          "id": 18,
+          "ship_strategy": "FORWARD",
+          "side": "second"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "type": "Sink: Unnamed",
+      "pact": "Data Sink",
+      "contents": "Sink: Unnamed",
+      "parallelism": 4,
+      "predecessors": [
+        {
+          "id": 16,
+          "ship_strategy": "FORWARD",
+          "side": "second"
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "type": "Sink: Unnamed",
+      "pact": "Data Sink",
+      "contents": "Sink: Unnamed",
+      "parallelism": 4,
+      "predecessors": [
+        {
+          "id": 21,
+          "ship_strategy": "FORWARD",
+          "side": "second"
+        }
+      ]
+    }
+  ]
+}

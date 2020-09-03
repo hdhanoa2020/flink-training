@@ -1,10 +1,8 @@
 package org.apache.flink.training.assignments.domain;
 
-import java.io.Serializable;
-
 import java.util.Objects;
 
-public class Allocation implements Serializable {
+public class Allocation extends IncomingEvent  {//implements Serializable {
     private static final long serialVersionUID = -887981985593847911L;
     private String account;
     private String subAccount;
@@ -88,4 +86,8 @@ public class Allocation implements Serializable {
         return other instanceof Allocation;
     }
 
+    @Override
+    public byte[] key() {
+        return new byte[0];
+    }
 }

@@ -11,14 +11,14 @@ import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindo
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer010;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer010;
-import org.apache.flink.training.assignments.assigners.PositionWatermark;
+import org.apache.flink.training.assignments.assigners.OrderTimeStampAssigner;
 import org.apache.flink.training.assignments.domain.ComplianceResult;
 import org.apache.flink.training.assignments.domain.Order;
 import org.apache.flink.training.assignments.domain.Position;
 import org.apache.flink.training.assignments.domain.PositionBySymbol;
 import org.apache.flink.training.assignments.functions.AllocationWindowFunction;
+import org.apache.flink.training.assignments.functions.OrderCusipSumWindow;
 import org.apache.flink.training.assignments.functions.OrderFlatMap;
-import org.apache.flink.training.assignments.functions.PostionsByCusip;
 import org.apache.flink.training.assignments.serializers.ComplianceResultSerialization;
 import org.apache.flink.training.assignments.serializers.OrderKafkaDeserialization;
 import org.apache.flink.training.assignments.serializers.PositionBySymbolSerialization;
@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
 
-public class KafkaOrderAssignment extends ExerciseBase {
+public class KafkaBlockOrder extends ExerciseBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaOrderAssignmentProcessingTime.class);
 
@@ -46,26 +46,25 @@ public class KafkaOrderAssignment extends ExerciseBase {
 
         var env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
-       // env.getConfig().setAutoWatermarkInterval(100000L); //10 sec
-        env.disableOperatorChaining();
+        // env.getConfig().setAutoWatermarkInterval(100000L); //10 sec
+        //env.disableOperatorChaining();
 
         // Create tbe Kafka Consumer here
         FlinkKafkaConsumer010<Order> flinkKafkaConsumer = createKafkaConsumer(IN_TOPIC,KAFKA_ADDRESS,KAFKA_GROUP);
-        var orderStream = env.addSource(flinkKafkaConsumer).name("KafkaOrderReader").uid("KafkaOrderReader");//.keyBy(trade -> trade.getCusip());
-
-       // orderStream.addSink(new LogSink<>(LOG, LogSink.LoggerEnum.INFO, " input orders : {}"));
+        var orderStream = env.addSource(flinkKafkaConsumer).keyBy(trade -> trade.getCusip()).
+                assignTimestampsAndWatermarks(new OrderTimeStampAssigner()).
+                name("OrderStream").uid("OrderStream");;// name("KafkaOrderReader").uid("KafkaOrderReader");//.keyBy(trade -> trade.getCusip());
 
         //flat the stream to get all the elements at the same level and assign watermarks
         DataStream<Position> accountAllocation = orderStream
-                 .keyBy(trade -> trade.getCusip())
-                .flatMap(new OrderFlatMap()).name("splitAllocations").uid("splitAllocations")
-                .assignTimestampsAndWatermarks(new PositionWatermark());
+                .keyBy(trade -> trade.getCusip())
+                .flatMap(new OrderFlatMap()).name("splitAllocations").uid("splitAllocations");
 
         //group by cusip,account and sub account
         DataStream<Position> positionsByAccount = CalculatePostionQty(accountAllocation);
         positionsByAccount.addSink(new LogSink<>(LOG, LogSink.LoggerEnum.INFO, "positionsByActOutput: {}"));
 
-        DataStream<PositionBySymbol> positionsBySymbol =  CalculatePostionQtyBySymbol(accountAllocation);
+        DataStream<Position> positionsBySymbol =  CalculatePostionQtyBySymbol(orderStream);
         positionsBySymbol.addSink(new LogSink<>(LOG, LogSink.LoggerEnum.INFO, " positionsBySymbolOutput : {}"));
 
 
@@ -76,7 +75,7 @@ public class KafkaOrderAssignment extends ExerciseBase {
                 .uid("FinalPositionsByAcctToKafka");
 
         // sent to topic
-        FlinkKafkaProducer010 flinkKafkaProducerSym = createKafkaPostionProducer(OUT_POSITIONS_BY_SYM_TOPIC,KAFKA_ADDRESS);
+        FlinkKafkaProducer010 flinkKafkaProducerSym = createKafkaProducer(OUT_POSITIONS_BY_SYM_TOPIC,KAFKA_ADDRESS);
         positionsBySymbol.addSink(flinkKafkaProducerSym)
                 .name("FinalPositionsBySymbolToKafka")
                 .uid("FinalPositionsBySymbolToKafka");
@@ -88,7 +87,7 @@ public class KafkaOrderAssignment extends ExerciseBase {
         positionsByAccount.addSink(flinkKafkaProducerTestResults2); */
 
         System.out.println(env.getExecutionPlan());
-        env.execute("kafkaOrders");
+        env.execute("kafkaBlockOrders");
     }
 
     private static DataStream<Position> CalculatePostionQty(DataStream<Position> accountAllocation){
@@ -102,18 +101,19 @@ public class KafkaOrderAssignment extends ExerciseBase {
                             }
                         }
                 ).window(TumblingEventTimeWindows.of(Time.seconds(1))) // 1, 10
-                 .process(new AllocationWindowFunction())
+                .process(new AllocationWindowFunction())
                 .name("TotalPositionsQtyByAccount")
                 .uid("TotalPositionsQtyByAccount");
 
     }
-    private static DataStream<PositionBySymbol> CalculatePostionQtyBySymbol(DataStream<Position> accountAllocation){
+    private static DataStream<Position> CalculatePostionQtyBySymbol(DataStream<Order> accountAllocation){
         return  accountAllocation
                 .keyBy(trade -> trade.getCusip())
                 .window(TumblingEventTimeWindows.of(Time.seconds(1)))
-                .process(new PostionsByCusip())
+                .process(new OrderCusipSumWindow())
                 .name("TotalPositionsQtyBySymbol").uid("TotalPositionsQtyBySymbol");
     }
+
 
     public static FlinkKafkaConsumer010<Order> createKafkaConsumer(String topic, String kafkaAddress,String group)
     {

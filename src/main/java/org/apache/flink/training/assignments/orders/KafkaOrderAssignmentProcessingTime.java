@@ -7,18 +7,16 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
+import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer010;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer010;
-import org.apache.flink.training.assignments.assigners.PositionWatermark;
 import org.apache.flink.training.assignments.domain.ComplianceResult;
 import org.apache.flink.training.assignments.domain.Order;
 import org.apache.flink.training.assignments.domain.Position;
 import org.apache.flink.training.assignments.domain.PositionBySymbol;
-import org.apache.flink.training.assignments.functions.AllocationWindowFunction;
+import org.apache.flink.training.assignments.functions.OrderCusipMap;
 import org.apache.flink.training.assignments.functions.OrderFlatMap;
-import org.apache.flink.training.assignments.functions.PostionsByCusip;
 import org.apache.flink.training.assignments.serializers.ComplianceResultSerialization;
 import org.apache.flink.training.assignments.serializers.OrderKafkaDeserialization;
 import org.apache.flink.training.assignments.serializers.PositionBySymbolSerialization;
@@ -30,7 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
 
-public class KafkaOrderAssignment extends ExerciseBase {
+public class KafkaOrderAssignmentProcessingTime extends ExerciseBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaOrderAssignmentProcessingTime.class);
 
@@ -45,28 +43,37 @@ public class KafkaOrderAssignment extends ExerciseBase {
     public static void main(String[] args) throws Exception {
 
         var env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
-       // env.getConfig().setAutoWatermarkInterval(100000L); //10 sec
+        env.setStreamTimeCharacteristic(TimeCharacteristic.ProcessingTime);
         env.disableOperatorChaining();
 
         // Create tbe Kafka Consumer here
         FlinkKafkaConsumer010<Order> flinkKafkaConsumer = createKafkaConsumer(IN_TOPIC,KAFKA_ADDRESS,KAFKA_GROUP);
-        var orderStream = env.addSource(flinkKafkaConsumer).name("KafkaOrderReader").uid("KafkaOrderReader");//.keyBy(trade -> trade.getCusip());
+        var orderStream = env.addSource(flinkKafkaConsumer).name("KafkaOrderReader").uid("KafkaOrderReader")
+                .keyBy(order -> order.getCusip());
 
-       // orderStream.addSink(new LogSink<>(LOG, LogSink.LoggerEnum.INFO, " input orders : {}"));
 
         //flat the stream to get all the elements at the same level and assign watermarks
         DataStream<Position> accountAllocation = orderStream
-                 .keyBy(trade -> trade.getCusip())
-                .flatMap(new OrderFlatMap()).name("splitAllocations").uid("splitAllocations")
-                .assignTimestampsAndWatermarks(new PositionWatermark());
+                 .flatMap(new OrderFlatMap()).name("splitAllocations").uid("splitAllocations");
 
         //group by cusip,account and sub account
         DataStream<Position> positionsByAccount = CalculatePostionQty(accountAllocation);
+
+        // Log results
         positionsByAccount.addSink(new LogSink<>(LOG, LogSink.LoggerEnum.INFO, "positionsByActOutput: {}"));
 
-        DataStream<PositionBySymbol> positionsBySymbol =  CalculatePostionQtyBySymbol(accountAllocation);
+        /**
+         * convert orders to  Positions by Cusip and publish to kafka
+         */
+        DataStream<Position> positionsBySymbol = aggregatePositionsBySymbol(orderStream)
+                .keyBy(positionByCusip -> positionByCusip.getCusip())
+                .window(TumblingProcessingTimeWindows.of(Time.seconds(1)))
+                .sum("quantity")
+                .name("AddPositionBySymbol")
+                .uid("AddPositionBySymbol");
+
         positionsBySymbol.addSink(new LogSink<>(LOG, LogSink.LoggerEnum.INFO, " positionsBySymbolOutput : {}"));
+
 
 
         // sent to topic
@@ -76,44 +83,33 @@ public class KafkaOrderAssignment extends ExerciseBase {
                 .uid("FinalPositionsByAcctToKafka");
 
         // sent to topic
-        FlinkKafkaProducer010 flinkKafkaProducerSym = createKafkaPostionProducer(OUT_POSITIONS_BY_SYM_TOPIC,KAFKA_ADDRESS);
+        FlinkKafkaProducer010 flinkKafkaProducerSym = createKafkaProducer(OUT_POSITIONS_BY_SYM_TOPIC,KAFKA_ADDRESS);
         positionsBySymbol.addSink(flinkKafkaProducerSym)
                 .name("FinalPositionsBySymbolToKafka")
                 .uid("FinalPositionsBySymbolToKafka");
 
-        /*/send output to out topic for comprison
-        FlinkKafkaProducer010 flinkKafkaProducerTestResults = createKafkaPostionProducer(OUT_TOPIC,KAFKA_ADDRESS);
-        FlinkKafkaProducer010 flinkKafkaProducerTestResults2 = createKafkaProducer(OUT_TOPIC,KAFKA_ADDRESS);
-        positionsBySymbol.addSink(flinkKafkaProducerTestResults);
-        positionsByAccount.addSink(flinkKafkaProducerTestResults2); */
-
         System.out.println(env.getExecutionPlan());
+        // execute the transformation pipeline
         env.execute("kafkaOrders");
     }
 
     private static DataStream<Position> CalculatePostionQty(DataStream<Position> accountAllocation){
         return accountAllocation.
-                // assignTimestampsAndWatermarks(new PositionWatermark()).
-                        keyBy(
-                        new KeySelector<Position, Tuple3<String, String,String>>() {
-                            @Override
-                            public Tuple3<String, String,String> getKey(Position value) throws Exception {
-                                return Tuple3.of(value.getCusip(), value.getAccount(),value.getSubAccount());
-                            }
-                        }
-                ).window(TumblingEventTimeWindows.of(Time.seconds(1))) // 1, 10
-                 .process(new AllocationWindowFunction())
+                keyBy(
+                new KeySelector<Position, Tuple3<String, String,String>>() {
+                    @Override
+                    public Tuple3<String, String,String> getKey(Position value) throws Exception {
+                        return Tuple3.of(value.getCusip(), value.getAccount(),value.getSubAccount());
+                    }
+                }
+        )
+                .window(TumblingProcessingTimeWindows.of(Time.seconds(1)))
+                .sum("quantity")
                 .name("TotalPositionsQtyByAccount")
                 .uid("TotalPositionsQtyByAccount");
 
     }
-    private static DataStream<PositionBySymbol> CalculatePostionQtyBySymbol(DataStream<Position> accountAllocation){
-        return  accountAllocation
-                .keyBy(trade -> trade.getCusip())
-                .window(TumblingEventTimeWindows.of(Time.seconds(1)))
-                .process(new PostionsByCusip())
-                .name("TotalPositionsQtyBySymbol").uid("TotalPositionsQtyBySymbol");
-    }
+
 
     public static FlinkKafkaConsumer010<Order> createKafkaConsumer(String topic, String kafkaAddress,String group)
     {
@@ -149,6 +145,14 @@ public class KafkaOrderAssignment extends ExerciseBase {
         return producer010;
     }
 
+    private static DataStream<Position> aggregatePositionsBySymbol(DataStream<Order> orderStream) {
+        var cusipPositions =  orderStream
+                .map(new OrderCusipMap())
+                .name("ConvertOrdersToPositionByCusip")
+                .uid("ConvertOrdersToPositionByCusip");
+        return cusipPositions;
+    }
+
     public static StreamExecutionEnvironment setEnvAndCheckpoints(){
         Configuration conf = new Configuration();
         conf.setString("state.backend", "filesystem");
@@ -163,6 +167,5 @@ public class KafkaOrderAssignment extends ExerciseBase {
         return env;
 
     }
-
 
 }

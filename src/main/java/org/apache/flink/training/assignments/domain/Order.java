@@ -12,9 +12,21 @@ public class Order extends IncomingEvent {
     private BuySell buySell;
     private BigDecimal bidOffer;
     private String currency;
+
     private int quantity;
+
+    public Boolean getEos() {
+        return eos;
+    }
+
+    public void setEos(Boolean eos) {
+        this.eos = eos;
+    }
+
     private long orderTime;
     private List<Allocation> allocations;
+    private String positionKey;
+    private Boolean eos;
 
     public Order(String orderId, String cusip, String assetType, BuySell buySell, BigDecimal bidOffer, String currency, int quantity, long orderTime, List<Allocation> allocations) {
         this.orderId = orderId;
@@ -43,6 +55,14 @@ public class Order extends IncomingEvent {
     /*public byte[] key() {
         return this.orderId.getBytes();
     }*/
+
+    public String getPositionKey() {
+        return positionKey;
+    }
+
+    public void setPositionKey(String positionKey) {
+        this.positionKey = positionKey;
+    }
 
     public String getOrderId() {
         return this.orderId;

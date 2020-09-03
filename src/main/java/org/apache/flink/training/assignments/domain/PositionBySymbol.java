@@ -10,7 +10,42 @@ public class PositionBySymbol extends IncomingEvent {
     private String orderId;
     private BigDecimal price;
     private BigDecimal marketValue;
+    private BuySell buySell;
+    private String account;
+    private String subAccount;
+    private String positionKey;
 
+    public String getPositionKey() {
+        return positionKey;
+    }
+
+    public void setPositionKey(String positionKey) {
+        this.positionKey = positionKey;
+    }
+
+    public BuySell getBuySell() {
+        return buySell;
+    }
+
+    public void setBuySell(BuySell buySell) {
+        this.buySell = buySell;
+    }
+
+    public String getAccount() {
+        return account;
+    }
+
+    public void setAccount(String account) {
+        this.account = account;
+    }
+
+    public String getSubAccount() {
+        return subAccount;
+   }
+
+    public void setSubAccount(String subAccount) {
+        this.subAccount = subAccount;
+    }
 
     public PositionBySymbol(String cusip, int quantity, String orderId) {
         this.quantity = quantity;
@@ -31,6 +66,7 @@ public class PositionBySymbol extends IncomingEvent {
                 ", quantity=" + quantity +
                 ", price=" + price +
                 ", marketValue=" + marketValue +
+                ", positionKey=" + positionKey +
                 ", orderId=" + orderId +
                 '}';
     }
